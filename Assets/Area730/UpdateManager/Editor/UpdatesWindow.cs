@@ -336,11 +336,11 @@ namespace Area730.UpdatesManager
         private static readonly int WindowHeight = 500;
         private static readonly string WindowTitle = "Area730 Update Manager";
 
-        private static readonly string eventTrackUrl = "https://labs.area730.com/registerEvent?type=assetstoreUpdatesManager&eventName=";
+        //private static readonly string eventTrackUrl = "https://labs.area730.com/registerEvent?type=assetstoreUpdatesManager&eventName=";
 
         public static void RegisterEvent(string name)
         {
-            WWW eventRequest = new WWW(eventTrackUrl + name);
+            //WWW eventRequest = new WWW(eventTrackUrl + name);
         }
       
         public static void ShowWindow()

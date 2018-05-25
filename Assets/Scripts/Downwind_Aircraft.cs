@@ -22,7 +22,6 @@ public class NewBehaviourScript : MonoBehaviour {
         rb = aircraft.GetComponent<Rigidbody>();
         ac = new Aircraft();
 
-
 	}
 
     public void Initialize_Aircraft(Aircraft ac)
