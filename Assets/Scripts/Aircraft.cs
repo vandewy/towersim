@@ -17,6 +17,7 @@ public class Aircraft : MonoBehaviour {
     public int ground_speed;
     public float turn_rate;
     public bool overhead_break;
+    public bool initial_spawn;
 
     public float px, py, pz;
     public float rx, ry, rz;

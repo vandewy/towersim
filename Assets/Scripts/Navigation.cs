@@ -5,12 +5,13 @@ using UnityEngine.AI;
 
 public class Navigation : MonoBehaviour {
 
-    public Transform destination_point;
+    //public Transform destination_point;
     //public GameObject nav;
 
     public GameObject aircraft;
     public GameObject downwind;
-    public GameObject base_leg;
+    public GameObject perch;
+    public GameObject short_final;
     public Rigidbody rb;
 
     public Aircraft ac;
@@ -23,14 +24,14 @@ public class Navigation : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-        //nav = new GameObject();
-        //nav = GameObject.Find("downwind");
+        //Get aircrafts mesh, enables navigation
         nav = GetComponent<NavMeshAgent>();
         
-        downwind = new GameObject();
-        aircraft = new GameObject();
-        downwind = GameObject.Find("downwind");
-        base_leg = GameObject.Find("base_leg");
+        //Location in the rectangular pattern
+        downwind = GameObject.Find("Downwind");
+        perch = GameObject.Find("Perch");
+        short_final = GameObject.Find("Short_Final");
+
 
         aircraft = GameObject.Find("C130");
         rb = aircraft.GetComponent<Rigidbody>();
@@ -49,10 +50,19 @@ public class Navigation : MonoBehaviour {
         ac.ry = 110;
         ac.rz = 0f;
 
+        ac.initial_spawn = true;
+        nav.SetDestination(downwind.transform.position);
+
     }
 
-    public void entering_downwind()
+    public void entering_downwind(Aircraft ac)
     {
+        float z_rotation = ac.rz;
+
+        while(ac.rz != -1f)
+        {
+            ac.rz += .00001f;
+        }
         //Destroy(transform.GetComponent<NavMeshAgent>());
         //Destroy(transform.GetComponent<MeshRenderer>());
 
@@ -65,22 +75,25 @@ public class Navigation : MonoBehaviour {
         //rb.AddForce(ac.xForce, ac.yForce, ac.zForce);
         entered_downwind = 1;
     }
-	
-	// Update is called once per frame
-	void Update () {
+
+    public void enter_downwind_controller()
+    {
+        System.Threading.Thread mThread = new System.Threading.Thread(() => entering_downwind(ac));
+        mThread.Start();
+    }
+
+    // Update is called once per frame
+    void Update () {
         if(entered_downwind == 0)
         {
             print("Nav Start");
             transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
-            nav.SetDestination(downwind.transform.position);
-            //transform.GetComponent<NavMeshAgent>().destination = downwind.transform.position;
-
+            //nav.SetDestination(downwind.transform.position);
         }
-     
-        else if(aircraft.transform.position.z <= 35 && entered_downwind == 0)
+        else if(entered_downwind == 0)
         {
             print("entering downind");
-            entering_downwind();
+            //entering_downwind();
 
             //Vector3 targetPosition = rb.transform.TransformPoint(new Vector3(ac.xForce, ac.yForce, ac.zForce));
             //rb.transform.position = Vector3.SmoothDamp(rb.transform.position, targetPosition, ref velocity, smoothTime);
@@ -90,10 +103,24 @@ public class Navigation : MonoBehaviour {
         if(entered_downwind == 1)
         {
             this.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
-            transform.GetComponent<NavMeshAgent>().destination = base_leg.transform.position;
+            transform.GetComponent<NavMeshAgent>().destination = perch.transform.position;
             //Vector3 targetPosition = rb.transform.TransformPoint(new Vector3(ac.xForce, ac.yForce, ac.zForce));
             //rb.transform.position = Vector3.SmoothDamp(rb.transform.position, targetPosition, ref velocity, smoothTime);
             //rb.velocity = Vector3.ClampMagnitude(rb.velocity, 10f);
+        }
+    }
+
+    public void OnTriggerEnter(Collider other)
+    {
+        print(other.gameObject.name);
+        if(other.gameObject.name == "Downwind")
+        {
+            enter_downwind_controller();
+            nav.SetDestination(perch.transform.position);
+
+        }else if(other.gameObject.name == "Perch")
+        {
+            nav.SetDestination(short_final.transform.position);
         }
     }
 }

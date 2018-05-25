@@ -17,7 +17,7 @@ public class NewBehaviourScript : MonoBehaviour {
     void Start () {
         downwind = new GameObject();
         aircraft = new GameObject();
-        downwind = GameObject.Find("downwind");
+        downwind = GameObject.Find("Downwind");
         aircraft = GameObject.Find("C130");
         rb = aircraft.GetComponent<Rigidbody>();
         ac = new Aircraft();
