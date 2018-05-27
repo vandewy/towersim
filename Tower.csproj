@@ -350,6 +350,7 @@
     <Compile Include="Assets\Scripts\Aircraft.cs" />
     <Compile Include="Assets\Scripts\Downwind_Aircraft.cs" />
     <Compile Include="Assets\Scripts\Flight.cs" />
+    <Compile Include="Assets\Scripts\flight_test.cs" />
     <Compile Include="Assets\Scripts\Navigation.cs" />
   </ItemGroup>
   <ItemGroup>

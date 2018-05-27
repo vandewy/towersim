@@ -5,46 +5,67 @@ using UnityEngine.AI;
 
 public class Navigation : MonoBehaviour {
 
-    //public Transform destination_point;
-    //public GameObject nav;
-
     public GameObject aircraft;
     public GameObject downwind;
     public GameObject perch;
     public GameObject short_final;
+
     public Rigidbody rb;
 
+    
+    public Animator anime;
+    public Animation animate;
+    public AnimationClip anim_clip;
+ 
     public Aircraft ac;
 
     public float smoothTime = .3f;
-    public Vector3 velocity = Vector3.zero;
+    
     public int entered_downwind = 0;
 
     public NavMeshAgent nav;
+
+    public GameObject goal;
+    public float movement_speed = 10f;
+    public Transform target;
 
     // Use this for initialization
     void Start () {
         //Get aircrafts mesh, enables navigation
         nav = GetComponent<NavMeshAgent>();
         
-        //Location in the rectangular pattern
+        //Locations in the traffic pattern
         downwind = GameObject.Find("Downwind");
         perch = GameObject.Find("Perch");
         short_final = GameObject.Find("Short_Final");
 
+        anime = gameObject.GetComponent<Animator>();
+        animate = gameObject.GetComponent<Animation>();
 
         aircraft = GameObject.Find("C130");
         rb = aircraft.GetComponent<Rigidbody>();
         ac = new Aircraft();
         Initialize_Aircraft(ac);
+
+        anime.enabled = true;
+        anime.Play("Fly_wheels_hidden");
+
+        load_animations();
+        target = GameObject.Find("Location").transform;
+    }
+
+    private void load_animations()
+    {
+        anim_clip = Resources.Load("enter_downwind") as AnimationClip;
+        animate.AddClip(anim_clip, "enter_downwind");
     }
 
 
     public void Initialize_Aircraft(Aircraft ac)
     {
-        ac.xForce = 8f;
-        ac.yForce = 0;
-        ac.zForce = 0f;
+        //ac.xForce = 8f;
+        //ac.yForce = 0;
+        //ac.zForce = 0f;
 
         ac.rx = -90;
         ac.ry = 110;
@@ -52,75 +73,59 @@ public class Navigation : MonoBehaviour {
 
         ac.initial_spawn = true;
         nav.SetDestination(downwind.transform.position);
-
+        
     }
 
-    public void entering_downwind(Aircraft ac)
+    public void entering_downwind()
     {
-        float z_rotation = ac.rz;
-
-        while(ac.rz != -1f)
-        {
-            ac.rz += .00001f;
-        }
-        //Destroy(transform.GetComponent<NavMeshAgent>());
-        //Destroy(transform.GetComponent<MeshRenderer>());
-
-        //ac.px = ac.transform.position.x;
-        //ac.py = ac.transform.position.y;
-        //ac.pz = ac.transform.position.z;
-        ac.ry += 70f;
-
-
-        //rb.AddForce(ac.xForce, ac.yForce, ac.zForce);
+        animate.PlayQueued("enter_downwind");
+        
         entered_downwind = 1;
-    }
 
-    public void enter_downwind_controller()
-    {
-        System.Threading.Thread mThread = new System.Threading.Thread(() => entering_downwind(ac));
-        mThread.Start();
+        //Downwind
+        ac.rx = -90;
+        ac.ry = 180;
+        ac.rz = 0f;
     }
 
     // Update is called once per frame
     void Update () {
-        if(entered_downwind == 0)
+
+        if (!animate.isPlaying && gameObject.GetComponent<NavMeshAgent>() != null)
         {
-            print("Nav Start");
             transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
-            //nav.SetDestination(downwind.transform.position);
-        }
-        else if(entered_downwind == 0)
-        {
-            print("entering downind");
-            //entering_downwind();
-
-            //Vector3 targetPosition = rb.transform.TransformPoint(new Vector3(ac.xForce, ac.yForce, ac.zForce));
-            //rb.transform.position = Vector3.SmoothDamp(rb.transform.position, targetPosition, ref velocity, smoothTime);
-            //rb.velocity = Vector3.ClampMagnitude(rb.velocity, 10f);
         }
 
-        if(entered_downwind == 1)
+        if(gameObject.GetComponent<NavMeshAgent>() == null)
         {
-            this.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
-            transform.GetComponent<NavMeshAgent>().destination = perch.transform.position;
-            //Vector3 targetPosition = rb.transform.TransformPoint(new Vector3(ac.xForce, ac.yForce, ac.zForce));
-            //rb.transform.position = Vector3.SmoothDamp(rb.transform.position, targetPosition, ref velocity, smoothTime);
-            //rb.velocity = Vector3.ClampMagnitude(rb.velocity, 10f);
+            print("herep");
+            find_location();
         }
+                
+    }
+
+    public void find_location()
+    {
+        rb.AddRelativeForce(Vector3.forward * movement_speed);
     }
 
     public void OnTriggerEnter(Collider other)
     {
-        print(other.gameObject.name);
+       
         if(other.gameObject.name == "Downwind")
         {
-            enter_downwind_controller();
+            
+            entering_downwind();
             nav.SetDestination(perch.transform.position);
 
-        }else if(other.gameObject.name == "Perch")
+        }
+        else if(other.gameObject.name == "Perch")
         {
             nav.SetDestination(short_final.transform.position);
+            GameObject.Destroy(nav);
+            GameObject.Destroy(gameObject.GetComponent<NavMeshAgent>());
+            find_location();
+
         }
     }
 }
