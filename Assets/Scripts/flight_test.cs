@@ -11,6 +11,7 @@ public class flight_test : MonoBehaviour {
     public float game_circle_start = -124;
     public float game_circle_stop = 235;
     public float left_downwind;
+    public float three_k_break;
     public float final;
     public float high_speed;
     public float field_elevation;
@@ -33,9 +34,10 @@ public class flight_test : MonoBehaviour {
     void Start () {
         final = 90;
         left_downwind = -90;
+        three_k_break = -90;
         high_speed = 125;
         field_elevation = 4f;
-        max_roll = 10;
+        max_roll = 35;
 
         rb = gameObject.GetComponent<Rigidbody>();
         north = GameObject.Find("North").GetComponent<Rigidbody>();
@@ -46,18 +48,24 @@ public class flight_test : MonoBehaviour {
 
     }
 
+    private void OnDestroy()
+    {
+        Destroy(gameObject);
+    }
+
     public void Initialize_Aircraft(Rigidbody rb, Aircraft ac)
     {
         
         ac.rx = rb.transform.rotation.x; //0 is level flight
-        ac.ry = 200f;//200 for direct downwind
+        ac.ry = 90f;//200 for direct downwind
         ac.rz = rb.transform.rotation.z;//0 is wings level
         rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
         ac.turn_rate = 1f;
-        ac.ground_speed = 10;
+        ac.ground_speed = 13;
         ac.py = rb.transform.position.y;//altitude
         ac.descent_rate = 6;
         ac.type = "civilian";
+        ac.roll_rate = .35f;
     }
 
 
@@ -86,7 +94,8 @@ public class flight_test : MonoBehaviour {
                 target += ac.turn_rate;
             }
             left_turn = false;
-            ac.turn_rate = 1f;
+            turning = false;
+            ac.turn_rate = 1f; //turn_rate returned to initial value
             
         }
         else if(right_turn == true)
@@ -98,7 +107,8 @@ public class flight_test : MonoBehaviour {
                 target += ac.turn_rate;
             }
             right_turn = false;
-            ac.turn_rate = 1f;
+            turning = false;
+            ac.turn_rate = 1f;//turn_rate returned to initial value
         }
     }
 
@@ -121,7 +131,7 @@ public class flight_test : MonoBehaviour {
 
         while(current_descent_rate > 0)
         {
-            if(ac.py < 12)
+            if(ac.py < altitude + 8)
             {
                 System.Threading.Thread.Sleep(100);
                 current_descent_rate -= .05f;
@@ -139,64 +149,82 @@ public class flight_test : MonoBehaviour {
 
     public void Roll(Aircraft ac, float degree_turn)
     {
-        //get midway point of turn
-        float init_heading = ac.ry;
-        int mid_turn = ((int)degree_turn / 2) + (int)init_heading;
         bool past_mid_turn = false;
 
         if(left_turn == true)
         {
-            while (true)
+            float init_heading = ac.ry;
+            int mid_turn = (int)init_heading - ((int)degree_turn / 2);
+            
+            while (turning == true)
             {
+                //aircraft rollgin
                 if (ac.rz < max_roll && past_mid_turn == false)
-                {
-                    
+                {                    
                     System.Threading.Thread.Sleep(80);
-                    ac.rz += .5f;
-                    if (ac.ry >= mid_turn)
+                    ac.rz += ac.roll_rate;
+                    
+                    if (ac.ry <= mid_turn)
+                    {                        
                         past_mid_turn = true;
+                    }
+                        
                 }
-                else if (ac.rz > 0 && past_mid_turn == true)
-                {
-                    
+                else if (ac.rz > 0 && past_mid_turn == true) //aircraft is unrolling
+                {                    
                     System.Threading.Thread.Sleep(80);
-                    ac.rz -= .5f;
+                    ac.rz -= ac.roll_rate/3;
                     if (ac.rz <= 0)
                     {
                         ac.rz = 0;
                         break;
                     }
+                }else if(ac.rz >= max_roll && ac.ry <= mid_turn)
+                {
+                    past_mid_turn = true;
                 }
             }
+            ac.rz = 0;
+            ac.roll_rate = .35f;//reset roll rate
+            
         }
         else if(right_turn == true)
         {
+            float init_heading = ac.ry;
+            int mid_turn = ((int)degree_turn / 2) + (int)init_heading;
             
             //use abs value of ac.rz, negative values for right turns on z axis
-            while (true)
+            while (turning == true)
             {
+                //aircraft is rolling
                 if ((ac.rz*-1) < max_roll && past_mid_turn == false)
                 {
                     
                     System.Threading.Thread.Sleep(80);
-                    ac.rz -= .5f;
+                    ac.rz -= ac.roll_rate;
+                    
                     if (ac.ry >= mid_turn) {
-                        print("trued");
                         past_mid_turn = true;
                     }
 
-                }else if((ac.rz*-1) > 0 && past_mid_turn == true)
+                }else if((ac.rz*-1) > 0 && past_mid_turn == true) //aircraft is unrolling
                 {
-                    print("bring back");
+
+                    ac.rz += ac.roll_rate/3;
                     System.Threading.Thread.Sleep(80);
-                    ac.rz += .5f;
+
                     if((ac.rz*-1) <= 0)
                     {
                         ac.rz = 0;
                         break;
                     }
+                }else if ((ac.rz*-1) >= max_roll && ac.ry >= mid_turn)
+                {
+                    past_mid_turn = true;
                 }
             }
+            ac.rz = 0;
+            ac.roll_rate = .35f;//reset roll rate
         }
     }
 
@@ -260,6 +288,7 @@ public class flight_test : MonoBehaviour {
         if (other.gameObject.name == "Downwind")
         {
             right_turn = true;
+            turning = true;
             float degree_turn = get_degree_turn(left_downwind);
             Turn_Controller(ac, degree_turn);
             Roll_Controller(ac, degree_turn);
@@ -267,25 +296,52 @@ public class flight_test : MonoBehaviour {
         else if (other.gameObject.name == "Perch")
         {
             left_turn = true;
+            turning = true;
             float degree_turn = get_degree_turn(final);
             ac.turn_rate = .625f;//for base turn only
             Turn_Controller(ac, degree_turn);
             Descent_Controller(ac, field_elevation);
             Roll_Controller(ac, degree_turn);
-        } else if (other.gameObject.name == "Short_Final")
+        } else if (other.gameObject.name == "Landing")
         {
             // a/c rolling out on runway speed
             ac.ground_speed = 8;
             ac.py = 4f;
             rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
             rb.constraints = RigidbodyConstraints.FreezePositionY;
+
         } else if (other.gameObject.name == "Enter_High_Speed")
         {
             right_turn = true;
             ac.turn_rate = 1.5f;
             float degree_turn = get_degree_turn(high_speed);
             Turn_Controller(ac, degree_turn);
-        } else if (other.gameObject.name == "Aircraft_Clear")
+        }else if(other.gameObject.name == "Three_K_Break")
+        {
+            right_turn = true;
+            turning = true;
+            ac.ground_speed = 10;
+            ac.turn_rate = 1f;
+            ac.roll_rate = 1f;
+            float degree_turn = get_degree_turn(three_k_break);
+            Turn_Controller(ac, degree_turn);
+            Roll_Controller(ac, degree_turn);
+
+        }else if(other.gameObject.name == "Break_Perch")
+        {
+            print("breaker");
+            right_turn = true;
+            turning = true;
+            ac.ground_speed = 9;
+            ac.turn_rate = .9f;
+            ac.roll_rate = 1f;
+            ac.descent_rate = 50;
+            float degree_turn = get_degree_turn(final);
+            Turn_Controller(ac, degree_turn);
+            Roll_Controller(ac, degree_turn);
+            Descent_Controller(ac, field_elevation);
+        }
+        else if (other.gameObject.name == "Aircraft_Clear")
         {
             
             Destroy(gameObject);
