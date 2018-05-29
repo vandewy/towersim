@@ -29,10 +29,11 @@ public class flight_test : MonoBehaviour {
     public bool right_turn = false;
 
     public Aircraft ac;
-
+    public Database db;
+    public List<object> ac_characteristics;
     // Use this for initialization
     void Start () {
-        final = 90;
+        final = 90; //used for downwind base and break
         left_downwind = -90;
         three_k_break = -90;
         high_speed = 125;
@@ -41,8 +42,9 @@ public class flight_test : MonoBehaviour {
 
         rb = gameObject.GetComponent<Rigidbody>();
         north = GameObject.Find("North").GetComponent<Rigidbody>();
-        speed = 10f;
+        //speed = 10f;
         ac = new Aircraft();
+        db = new Database();
 
         Initialize_Aircraft(rb, ac);
 
@@ -55,17 +57,29 @@ public class flight_test : MonoBehaviour {
 
     public void Initialize_Aircraft(Rigidbody rb, Aircraft ac)
     {
-        
+        //current list of ac characteristics in order
+        //type, climb_rate, descent_rate, turn_rate
+        //roll_rate, ground_speed, category, weight_class
+        ac_characteristics = db.get_ac_characteristics("C172");
+        ac.type = (string)ac_characteristics[0];
+        ac.climb_rate = (int)ac_characteristics[1];
+        ac.descent_rate = (int)ac_characteristics[2];
+        ac.turn_rate = (float)ac_characteristics[3];
+        ac.roll_rate = (float)ac_characteristics[4];
+        ac.ground_speed = (int)ac_characteristics[5];
+        ac.category = (int)ac_characteristics[6];
+        ac.weight_class = (string)ac_characteristics[7];
+
         ac.rx = rb.transform.rotation.x; //0 is level flight
-        ac.ry = 90f;//200 for direct downwind
+        //y rotation is important for aircraft heading on spawn
+        if (ac.type == "C172")
+            ac.ry = 200;// for direct 
+        else if (ac.type == "F16")
+            ac.ry = 90f;//initial to overhead
         ac.rz = rb.transform.rotation.z;//0 is wings level
         rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
-        ac.turn_rate = 1f;
-        ac.ground_speed = 13;
         ac.py = rb.transform.position.y;//altitude
-        ac.descent_rate = 6;
-        ac.type = "civilian";
-        ac.roll_rate = .35f;
+
     }
 
 
@@ -158,7 +172,7 @@ public class flight_test : MonoBehaviour {
             
             while (turning == true)
             {
-                //aircraft rollgin
+                //aircraft rolling
                 if (ac.rz < max_roll && past_mid_turn == false)
                 {                    
                     System.Threading.Thread.Sleep(80);
@@ -173,7 +187,7 @@ public class flight_test : MonoBehaviour {
                 else if (ac.rz > 0 && past_mid_turn == true) //aircraft is unrolling
                 {                    
                     System.Threading.Thread.Sleep(80);
-                    ac.rz -= ac.roll_rate/3;
+                    ac.rz -= ac.roll_rate;
                     if (ac.rz <= 0)
                     {
                         ac.rz = 0;
@@ -210,7 +224,7 @@ public class flight_test : MonoBehaviour {
                 }else if((ac.rz*-1) > 0 && past_mid_turn == true) //aircraft is unrolling
                 {
 
-                    ac.rz += ac.roll_rate/3;
+                    ac.rz += ac.roll_rate;
                     System.Threading.Thread.Sleep(80);
 
                     if((ac.rz*-1) <= 0)
@@ -329,7 +343,6 @@ public class flight_test : MonoBehaviour {
 
         }else if(other.gameObject.name == "Break_Perch")
         {
-            print("breaker");
             right_turn = true;
             turning = true;
             ac.ground_speed = 9;

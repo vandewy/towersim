@@ -20,6 +20,8 @@ public class Aircraft : MonoBehaviour {
     public bool initial_spawn;
     // How quickly an aircraft banks
     public float roll_rate;
+    public string weight_class;
+    public int category;
 
     public float px, py, pz;
     public float rx, ry, rz;

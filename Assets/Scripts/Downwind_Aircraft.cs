@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class NewBehaviourScript : MonoBehaviour {
+public class Downwind_Aircraft : MonoBehaviour {
 
     public GameObject aircraft;
     public GameObject downwind;
