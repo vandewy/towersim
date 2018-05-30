@@ -27,6 +27,7 @@ public class flight_test : MonoBehaviour {
     public bool turning = false;
     public bool left_turn = false;
     public bool right_turn = false;
+    public bool departure = false;
 
     public Aircraft ac;
     public Database db;
@@ -60,7 +61,10 @@ public class flight_test : MonoBehaviour {
         //current list of ac characteristics in order
         //type, climb_rate, descent_rate, turn_rate
         //roll_rate, ground_speed, category, weight_class
-        ac_characteristics = db.get_ac_characteristics("C172");
+        //departure point
+        ac.call_sign = gameObject.name;
+        print(ac.call_sign);
+        ac_characteristics = db.get_ac_characteristics(db.get_type(ac.call_sign));
         ac.type = (string)ac_characteristics[0];
         ac.climb_rate = (int)ac_characteristics[1];
         ac.descent_rate = (int)ac_characteristics[2];
@@ -69,24 +73,41 @@ public class flight_test : MonoBehaviour {
         ac.ground_speed = (int)ac_characteristics[5];
         ac.category = (int)ac_characteristics[6];
         ac.weight_class = (string)ac_characteristics[7];
+        ac.departure_point = (string)ac_characteristics[8];
 
-        ac.rx = rb.transform.rotation.x; //0 is level flight
-        //y rotation is important for aircraft heading on spawn
-        if (ac.type == "C172")
-            ac.ry = 200;// for direct 
-        else if (ac.type == "F16")
-            ac.ry = 90f;//initial to overhead
-        ac.rz = rb.transform.rotation.z;//0 is wings level
-        rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
-        ac.py = rb.transform.position.y;//altitude
+        //changes important aircraft mechanics in the following lines
+        departure = db.is_departure(ac.call_sign);
 
+        if(departure == true)
+        {
+            print("dep");
+        }else if(departure == false)
+        {
+            ac.rx = rb.transform.rotation.x; //0 is level flight
+                                             //y rotation is important for aircraft heading on spawn
+            if (ac.type == "C172")
+                ac.ry = 200;// for direct 
+            else if (ac.type == "F16")
+                ac.ry = 90f;//initial to overhead
+            ac.rz = rb.transform.rotation.z;//0 is wings level
+            rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
+            ac.py = rb.transform.position.y;//altitude
+        }
+        
     }
 
 
     // Update is called once per frame
     void Update () {
-        ac.py = rb.transform.position.y;
-        Move();
+        if(departure == true)
+        {
+
+        }
+        else
+        {
+            ac.py = rb.transform.position.y;
+            Move();
+        }
     }
 
     public void Turn_Controller(Aircraft ac, float degree_turn)
@@ -290,10 +311,13 @@ public class flight_test : MonoBehaviour {
 
     public void Move()
     {
-        rb.AddRelativeForce(Vector3.forward * ac.ground_speed);
-        rb.velocity = Vector3.ClampMagnitude(rb.velocity, ac.ground_speed);
-        //rx == pitch, ry == yaw, rz == roll
-        rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
+        if(departure == false)
+        {
+            rb.AddRelativeForce(Vector3.forward * ac.ground_speed);
+            rb.velocity = Vector3.ClampMagnitude(rb.velocity, ac.ground_speed);
+            //rx == pitch, ry == yaw, rz == roll
+            rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
+        }
     }
 
     public void OnTriggerEnter(Collider other)

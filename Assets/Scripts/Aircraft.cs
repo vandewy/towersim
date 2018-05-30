@@ -8,6 +8,7 @@ public class Aircraft : MonoBehaviour {
     public int new_altitude;
     public string call_sign;
     public int heading;
+    public string departure_point;
     public string type;
     public float xVelocity;
     public float yVelocity;
