@@ -23,6 +23,9 @@ public class flight_test : MonoBehaviour {
     public Rigidbody north;
     public Rigidbody rb;
     public float speed;
+    public float taxi_speed;
+    public bool luaw; //line up and wait
+    public float luaw_speed;
 
     public bool turning = false;
     public bool left_turn = false;
@@ -34,12 +37,15 @@ public class flight_test : MonoBehaviour {
     public List<object> ac_characteristics;
     // Use this for initialization
     void Start () {
-        final = 90; //used for downwind base and break
+        final = 90; //used for downwind base and break and luaw
         left_downwind = -90;
         three_k_break = -90;
         high_speed = 125;
         field_elevation = 4f;
         max_roll = 35;
+        taxi_speed = 2;
+        luaw_speed = 2;
+        luaw = false;
 
         rb = gameObject.GetComponent<Rigidbody>();
         north = GameObject.Find("North").GetComponent<Rigidbody>();
@@ -80,7 +86,8 @@ public class flight_test : MonoBehaviour {
 
         if(departure == true)
         {
-            print("dep");
+            ac.ry = 0f;
+            lineup_and_wait(ac);
         }else if(departure == false)
         {
             ac.rx = rb.transform.rotation.x; //0 is level flight
@@ -96,12 +103,33 @@ public class flight_test : MonoBehaviour {
         
     }
 
+    public void lineup_and_wait(Aircraft ac)
+    {
+        right_turn = true;
+        float degree_turn = get_degree_turn(final);
+        rb.constraints = RigidbodyConstraints.FreezePositionY;//ensure a/c doesn't change altitude
+        luaw = true;
+        //uniform taxi speed could be made a/c specific
+        ac.turn_rate = .5f;
+        Turn_Controller(ac, degree_turn);
+
+    }
+
 
     // Update is called once per frame
     void Update () {
         if(departure == true)
         {
-
+            if(luaw == true)//aircaft_luaw handles turn onto runway
+            {
+                //uniform taxi speed could be made a/c specific
+                rb.AddRelativeForce(Vector3.forward * luaw_speed);
+                rb.velocity = Vector3.ClampMagnitude(rb.velocity, luaw_speed);
+                rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
+            }else if(luaw == false && ac.ry > 0)
+            {
+                rb.constraints = RigidbodyConstraints.FreezePosition;
+            }
         }
         else
         {
@@ -112,8 +140,32 @@ public class flight_test : MonoBehaviour {
 
     public void Turn_Controller(Aircraft ac, float degree_turn)
     {
-        System.Threading.Thread mThread = new System.Threading.Thread(() => Turn(ac, degree_turn));
-        mThread.Start();
+        if (luaw == true)
+        {
+            System.Threading.Thread mThread = new System.Threading.Thread(() => aircraft_luaw(ac, degree_turn));
+            mThread.Start();
+        }
+        else
+        {
+            System.Threading.Thread mThread = new System.Threading.Thread(() => Turn(ac, degree_turn));
+            mThread.Start();
+        }
+        
+    }
+    
+    public void aircraft_luaw(Aircraft ac, float degree_turn)
+    {
+        float target = 0;
+        while (target < degree_turn)
+        {
+            System.Threading.Thread.Sleep(80);
+            ac.ry += ac.turn_rate;
+            target += ac.turn_rate;
+        }
+        luaw = false;
+        right_turn = false;
+        turning = false;
+        ac.turn_rate = 1f;//turn_rate returned to initial value
     }
 
     public void Turn(Aircraft ac, float degree_turn)
@@ -295,6 +347,7 @@ public class flight_test : MonoBehaviour {
         else if(right_turn == true)
         {
             target += 124;
+            print("target: " + target);
             if(target < true_heading)
             {
                 degree_turn = (north - true_heading) + target;
@@ -340,7 +393,7 @@ public class flight_test : MonoBehaviour {
             Turn_Controller(ac, degree_turn);
             Descent_Controller(ac, field_elevation);
             Roll_Controller(ac, degree_turn);
-        } else if (other.gameObject.name == "Landing")
+        } else if (other.gameObject.name == "Landing" && departure == false)
         {
             // a/c rolling out on runway speed
             ac.ground_speed = 8;
