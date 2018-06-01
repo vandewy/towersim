@@ -24,8 +24,14 @@ public class Spawn : MonoBehaviour
 
         departure = true;
         //will need to be reset after gameobject is destroyed
+        db.update_as_departure(ac_callsigns[2].call_sign);
+        spawn_aircraft(ac_callsigns[2], departure);
+
         db.update_as_departure(ac_callsigns[0].call_sign);
         spawn_aircraft(ac_callsigns[0], departure);
+
+        db.update_as_departure(ac_callsigns[3].call_sign);
+        spawn_aircraft(ac_callsigns[3], departure);
 
     }
 

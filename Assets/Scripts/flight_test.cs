@@ -8,13 +8,14 @@ public class flight_test : MonoBehaviour {
     //in future game rotation could be changed to
     //fix but until small calculations are made
     //for determining actual headings and turns
-    public float game_circle_start = -124;
-    public float game_circle_stop = 235;
+    public float game_circle_start = -124; //360
+    public float game_circle_stop = 235; //359
     public float left_downwind;
     public float three_k_break;
     public float final;
     public float high_speed;
     public float field_elevation;
+    public float rectangular_pattern;
 
     //max roll when a/c turns
     public int max_roll;
@@ -25,7 +26,10 @@ public class flight_test : MonoBehaviour {
     public float speed;
     public float taxi_speed;
     public bool luaw; //line up and wait
+    public bool luaw_complete;
     public float luaw_speed;
+    public bool cleared_takeoff;
+
 
     public bool turning = false;
     public bool left_turn = false;
@@ -42,10 +46,13 @@ public class flight_test : MonoBehaviour {
         three_k_break = -90;
         high_speed = 125;
         field_elevation = 4f;
+        rectangular_pattern = 22f;
         max_roll = 35;
         taxi_speed = 2;
         luaw_speed = 2;
         luaw = false;
+        luaw_complete = false;
+        cleared_takeoff = false;
 
         rb = gameObject.GetComponent<Rigidbody>();
         north = GameObject.Find("North").GetComponent<Rigidbody>();
@@ -60,6 +67,7 @@ public class flight_test : MonoBehaviour {
     private void OnDestroy()
     {
         Destroy(gameObject);
+       
     }
 
     public void Initialize_Aircraft(Rigidbody rb, Aircraft ac)
@@ -69,7 +77,7 @@ public class flight_test : MonoBehaviour {
         //roll_rate, ground_speed, category, weight_class
         //departure point
         ac.call_sign = gameObject.name;
-        print(ac.call_sign);
+        
         ac_characteristics = db.get_ac_characteristics(db.get_type(ac.call_sign));
         ac.type = (string)ac_characteristics[0];
         ac.climb_rate = (int)ac_characteristics[1];
@@ -112,7 +120,15 @@ public class flight_test : MonoBehaviour {
         //uniform taxi speed could be made a/c specific
         ac.turn_rate = .5f;
         Turn_Controller(ac, degree_turn);
+        
+    }
 
+ 
+    //called after player uses phraseology
+    public void take_off(Aircraft ac)
+    {
+        rb.constraints = RigidbodyConstraints.None;
+        cleared_takeoff = true;
     }
 
 
@@ -126,13 +142,29 @@ public class flight_test : MonoBehaviour {
                 rb.AddRelativeForce(Vector3.forward * luaw_speed);
                 rb.velocity = Vector3.ClampMagnitude(rb.velocity, luaw_speed);
                 rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
-            }else if(luaw == false && ac.ry > 0)
+            }
+            else if(luaw == false && luaw_complete == true)
             {
-                rb.constraints = RigidbodyConstraints.FreezePosition;
+                rb.constraints = RigidbodyConstraints.FreezeAll;
+                luaw_complete = false;//prevent update from running statement continuously
+                take_off(ac);//WILL NOT REMAIN CALLED BY PLAYER
+            }
+            else if(cleared_takeoff == true)
+            {
+                rb.AddRelativeForce(Vector3.forward * 1f);//VARY AIRCRAFT SPEEDS IN FUTURE
+                rb.velocity = Vector3.ClampMagnitude(rb.velocity, ac.ground_speed);
+                rb.transform.localEulerAngles = new Vector3(ac.rx, ac.ry, ac.rz);
+                var x_velocity = rb.GetRelativePointVelocity(rb.transform.localPosition);
+                //time to climb
+                if(x_velocity.x >= ac.ground_speed)
+                {
+                    departure = false;//control goes back to else statement
+                    Climb_Controller(ac, rectangular_pattern);
+                }
             }
         }
         else
-        {
+        { 
             ac.py = rb.transform.position.y;
             Move();
         }
@@ -165,6 +197,7 @@ public class flight_test : MonoBehaviour {
         luaw = false;
         right_turn = false;
         turning = false;
+        luaw_complete = true; //needed to hold aircraft before takeoff clearence
         ac.turn_rate = 1f;//turn_rate returned to initial value
     }
 
@@ -207,6 +240,7 @@ public class flight_test : MonoBehaviour {
 
     public void Descend(Aircraft ac, float altitude)
     {
+        int terminator = 1000;//prevent wild thread
         float current_descent_rate = ac.rx;
 
         while(current_descent_rate < ac.descent_rate)
@@ -214,6 +248,9 @@ public class flight_test : MonoBehaviour {
             System.Threading.Thread.Sleep(100);
             current_descent_rate += .05f;
             ac.rx += .05f;
+            terminator--;
+            if (terminator <= 0)
+                break;
         }
 
         while(current_descent_rate > 0)
@@ -223,8 +260,52 @@ public class flight_test : MonoBehaviour {
                 System.Threading.Thread.Sleep(100);
                 current_descent_rate -= .05f;
                 ac.rx -= .05f;
+                terminator--;
+                if (terminator <= 0)
+                    break;
             }
+            terminator--;
+            if (terminator <= 0)
+                break;
         }
+        ac.rx = 0;
+    }
+
+    public void Climb_Controller(Aircraft ac, float altitude)
+    {
+        System.Threading.Thread mThread = new System.Threading.Thread(() => Climb(ac, altitude));
+        mThread.Start();
+    }
+
+    public void Climb(Aircraft ac, float altitude)
+    {
+        int terminator = 10000;//prevent wild thread
+        float current_climb_rate = ac.rx;
+
+        while (current_climb_rate < ac.climb_rate)
+        {
+            System.Threading.Thread.Sleep(100);
+            current_climb_rate += .20f;
+            ac.rx -= .20f;
+            terminator--;
+            if (terminator <= 0)
+                break;
+        }
+
+        while (current_climb_rate > 0)
+        {
+            if (ac.py > altitude - 8)
+            {
+                System.Threading.Thread.Sleep(100);
+                current_climb_rate -= .5f;
+                ac.rx += .5f;
+                terminator--;
+                if (terminator <= 0)
+                    break;
+            }
+           
+        }
+        print("terminator: " + terminator);
         ac.rx = 0;
     }
 
@@ -347,7 +428,7 @@ public class flight_test : MonoBehaviour {
         else if(right_turn == true)
         {
             target += 124;
-            print("target: " + target);
+    
             if(target < true_heading)
             {
                 degree_turn = (north - true_heading) + target;
@@ -403,10 +484,15 @@ public class flight_test : MonoBehaviour {
 
         } else if (other.gameObject.name == "Enter_High_Speed")
         {
-            right_turn = true;
-            ac.turn_rate = 1.5f;
-            float degree_turn = get_degree_turn(high_speed);
-            Turn_Controller(ac, degree_turn);
+            //prevents departures turning onto high speed before airborne
+            if(cleared_takeoff == false)
+            {
+                right_turn = true;
+                ac.turn_rate = 1.5f;
+                float degree_turn = get_degree_turn(high_speed);
+                Turn_Controller(ac, degree_turn);
+            }
+  
         }else if(other.gameObject.name == "Three_K_Break")
         {
             right_turn = true;

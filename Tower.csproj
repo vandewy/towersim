@@ -283,6 +283,12 @@
     <Reference Include="RTVoiceUWPBridge">
       <HintPath>Assets/crosstales/RTVoice/Plugins/WSA/Stub/RTVoiceUWPBridge.dll</HintPath>
     </Reference>
+    <Reference Include="Mono.Data.Sqlite">
+      <HintPath>Assets/Plugins/Mono.Data.Sqlite.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data">
+      <HintPath>Assets/Plugins/System.Data.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.Advertisements">
       <HintPath>C:/Users/vande/AppData/LocalLow/Unity/cache/packages/packages.unity.com/com.unity.ads@2.0.3/UnityEngine.Advertisements.dll</HintPath>
     </Reference>
@@ -348,10 +354,13 @@
     <Compile Include="Assets\crosstales\UI\Scripts\WindowManager.cs" />
     <Compile Include="Assets\Grass And Flowers Pack 1\Example Scene\SimpleTextureDrawing.cs" />
     <Compile Include="Assets\Scripts\Aircraft.cs" />
+    <Compile Include="Assets\Scripts\Database.cs" />
     <Compile Include="Assets\Scripts\Downwind_Aircraft.cs" />
     <Compile Include="Assets\Scripts\Flight.cs" />
     <Compile Include="Assets\Scripts\flight_test.cs" />
     <Compile Include="Assets\Scripts\Navigation.cs" />
+    <Compile Include="Assets\Scripts\Spawn.cs" />
+    <Compile Include="Assets\Scripts\Timer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Grass And Flowers Pack 1\Example Scene\Skyboxes\_skybox info.txt" />
